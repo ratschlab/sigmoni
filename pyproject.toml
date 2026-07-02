@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sigmoni"
+version = "0.1.2.dev1"
+requires-python = ">=3.9"
+dependencies = [
+    "attrs",
+    "biopython",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "tqdm",
+    "uncalled4",
+]
+
+# SPUMONI is a required external binary (not available on PyPI).
+# Install from source: https://github.com/oma219/spumoni/
+# and ensure 'spumoni' is on PATH (or pass --spumoni-path at runtime).
+
+[project.optional-dependencies]
+readfish = [
+    "readfish",
+    "minknow-api",
+]
+
+[project.scripts]
+sigmoni-index    = "sigmoni.cli:index"
+sigmoni-classify = "sigmoni.cli:classify"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sigmoni*"]

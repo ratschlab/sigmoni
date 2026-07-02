@@ -150,6 +150,33 @@ model_6mer = unc.PoreModel(os.path.join(os.path.dirname(__file__),'../poremodel/
 #     counts = counts / counts.sum()
 #     return entropy(counts, np.ones(len(counts)) / len(counts))  
 
+def resolve_spumoni_path(path: str) -> str:
+    """Return the spumoni binary path, accepting either the binary or its parent directory.
+
+    If a directory is given, looks for an executable named 'spumoni' inside it.
+    Also sets SPUMONI_BUILD_DIR in the environment if not already set, inferring it
+    as the parent of the directory containing the binary (the standard build layout
+    places the binary at <build_dir>/src/spumoni, so build_dir = dirname(dirname(binary))).
+    """
+    if os.path.isdir(path):
+        candidate = os.path.join(path, 'spumoni')
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            binary = candidate
+        else:
+            raise FileNotFoundError(
+                f"--spumoni-path '{path}' is a directory but no executable 'spumoni' was found inside it"
+            )
+    else:
+        binary = path
+
+    if 'SPUMONI_BUILD_DIR' not in os.environ:
+        build_dir = os.path.dirname(os.path.dirname(os.path.abspath(binary)))
+        os.environ['SPUMONI_BUILD_DIR'] = build_dir
+        print(f"Set SPUMONI_BUILD_DIR={build_dir}")
+
+    return binary
+
+
 try:
     from delta_rust import delta as delta
     print('using Rust delta implementation')    
