@@ -46,6 +46,8 @@ def _index_parse_args():
     group.add_argument('-nl', dest='null_filelist', default=[], help='file listing negative reference FASTAs')
     group.add_argument('-n', dest='null_filelist', default=[], nargs='+', help='negative reference FASTA(s)')
 
+    parser.add_argument('--poremodel', dest='poremodel', default=None,
+                        help='path to pore model TSV file (default: built-in R9 6-mer model)')
     parser.add_argument('-b', '--nbins', dest='nbins', default=6, type=int,
                         help='number of bins to discretize signal (default: 6)')
     parser.add_argument('--shred', dest='shred_size', default=int(1e5), type=int,
@@ -69,7 +71,8 @@ def _index_format_args(args):
         args.null_filelist = list(map(os.path.abspath, open(args.null_filelist).read().splitlines()))
     args.output_path = os.path.abspath(args.output_path)
     args.spumoni_path = _resolve_spumoni_path(args.spumoni_path)
-    args.bins = HPCBin(nbins=args.nbins, poremodel=utils.model_6mer, clip=False)
+    poremodel = args.poremodel if args.poremodel else utils.model_6mer
+    args.bins = HPCBin(nbins=args.nbins, poremodel=poremodel, clip=False)
 
 
 def _bin_reference(args, files):

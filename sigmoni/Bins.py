@@ -138,12 +138,28 @@ class HPCBin(Bin):
     #         ax.axvline(self.minc + (idx * self.space))
     #     return ax
     def save_bins(self, fname):
-        # save the defining variables
         pickle.dump((self.nbins, self.poremodel_df), open(fname, 'wb'))
+
     @classmethod
-    def from_pickle(fname):
-        nbins, poremodel  = pickle.load(open(fname, 'rb'))
-        return HPCBin(nbins=nbins, poremodel=unc.PoreModel(df = poremodel))
+    def from_pickle(cls, fname):
+        nbins, poremodel_df = pickle.load(open(fname, 'rb'))
+        # Bypass __init__ to avoid unc.PoreModel(df=...).to_df() returning
+        # different column names ('mean' vs 'current.mean').
+        inst = cls.__new__(cls)
+        inst.bounds = None
+        inst.nbins = nbins
+        inst.clip = False
+        inst.poremodel_df = poremodel_df
+        inst.minc = float(poremodel_df['current.mean'].min())
+        inst.maxc = float(poremodel_df['current.mean'].max())
+        inst.space = (inst.maxc - inst.minc) / inst.nbins
+        inst.kmer_to_bin = inst.signal_to_binseq(poremodel_df['current.mean']).to_numpy()
+        inst.binmodel = [
+            (float(np.mean(poremodel_df['current.mean'][np.where(inst.kmer_to_bin == idx)[0]])),
+             float(np.mean(poremodel_df['current.stdv'][np.where(inst.kmer_to_bin == idx)[0]])))
+            for idx in range(nbins)
+        ]
+        return inst
     
 class SigProcHPCBin(HPCBin):
     def __init__(self, nbins=64, poremodel=utils.model_6mer, bounds=None, clip=False) -> None:

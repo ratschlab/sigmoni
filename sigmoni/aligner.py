@@ -110,10 +110,17 @@ class Aligner:
         nbins = int(kwargs.pop('nbins', 6))
         sig_proc = kwargs.pop('sig_proc', False)
 
-        if sig_proc:
-            self.bins = SigProcHPCBin(nbins=nbins, poremodel=utils.model_6mer, clip=False)
+        # Prefer the pore model saved alongside the index (set at build time) so
+        # that query binning always matches reference binning exactly.
+        BinClass = SigProcHPCBin if sig_proc else HPCBin
+        refs_dir = os.path.dirname(self.ref_prefix)
+        bins_path = os.path.join(refs_dir, 'poremodel.bins')
+        if os.path.exists(bins_path):
+            self.bins = BinClass.from_pickle(bins_path)
+            print(f"Sigmoni: loaded bin model from {bins_path} (nbins={self.bins.nbins})")
         else:
-            self.bins = HPCBin(nbins=nbins, poremodel=utils.model_6mer, clip=False)
+            self.bins = BinClass(nbins=nbins, poremodel=utils.model_6mer, clip=False)
+            print("Sigmoni: poremodel.bins not found, using default R9 6-mer model")
 
         if self.multi:
             refs_dir = os.path.dirname(self.ref_prefix)
@@ -129,8 +136,10 @@ class Aligner:
             self._index = None
         else:
             os.environ['PARLAY_NUM_THREADS'] = str(self.threads)
-            # Load index once: '-d' enables document array (needed for multi-class).
-            args = ['-r', self.ref_prefix, '-P']
+            # '-n' disables minimizer digestion (min_digest=false) — sigmoni
+            # uses a custom binned alphabet, not DNA minimizers.
+            # '-d' enables document array (needed for multi-class).
+            args = ['-r', self.ref_prefix, '-P', '-n']
             if self.multi:
                 args.append('-d')
             self._index = _SpumoniIndex(args)
